@@ -25,7 +25,7 @@
         .header {
             background: var(--dark-blue);
             color: white;
-            padding: 1.5rem;
+            padding: 1rem;
             text-align: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
@@ -285,6 +285,35 @@
         .toc-subsection {
             padding-left: 1.5rem;
         }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo-text {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-left: 1rem;
+            color: white;
+        }
+
+        .nav-links {
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin: 0 1rem;
+            font-weight: 500;
+        }
+        
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
         
         /* Responsive Styles */
         @media (max-width: 768px) {
@@ -306,6 +335,12 @@
                 <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" fill="white" font-size="18" font-weight="bold">PE</text>
             </svg>
             <span class="logo-text">PerchEye SDK</span>
+        </div>
+        <div class="nav-links">
+            <a href="">Home</a>
+            <a href="https://vladimironix.github.io/PerchEye-SDK/howt-to-use">How to Use</a>
+            <a href="https://github.com/VladimirOnix/PerchEye-SDK/blob/main/README.md">Documentation</a>
+            <a href="https://github.com/VladimirOnix/PerchEye-SDK/tree/main/android-aar">Download</a>
         </div>
     </div>
     
