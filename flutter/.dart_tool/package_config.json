@@ -1,0 +1,17 @@
+{
+  "configVersion": 2,
+  "packages": [
+    {
+      "name": "perch_eye",
+      "rootUri": "../",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    }
+  ],
+  "generated": "2025-05-05T12:08:35.240872Z",
+  "generator": "pub",
+  "generatorVersion": "3.7.2",
+  "flutterRoot": "file:///Users/bohdanpodolian/FlutterDev/flutter",
+  "flutterVersion": "3.29.3",
+  "pubCache": "file:///Users/bohdanpodolian/.pub-cache"
+}
