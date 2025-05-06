@@ -30,6 +30,85 @@ class PerchEyePlugin: FlutterPlugin, MethodCallHandler {
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when (call.method) {
+            "init" -> {
+                perchEye.init()
+                result.success(null)
+            }
+            "destroy" -> {
+                perchEye.destroy()
+                result.success(null)
+            }
+            "openTransaction" -> {
+                perchEye.openTransaction()
+                result.success(null)
+            }
+            "addImage" -> {
+                val img = call.argument<String>("img")
+                val bmp = decode(img)
+                val res = bmp?.let { perchEye.addImage(it).name } ?: "INTERNAL_ERROR"
+                result.success(res)
+            }
+            "addImageRaw" -> {
+                val pixels = call.argument<ByteArray>("pixels")
+                val width = call.argument<Int>("width") ?: 0
+                val height = call.argument<Int>("height") ?: 0
+                if (pixels == null || width <= 0 || height <= 0) {
+                    result.error("INVALID_ARGUMENT", "Missing or invalid RGBA data", null)
+                    return
+                }
+
+                val imageResult = perchEye.addImage(pixels, width, height)
+                result.success(imageResult.name)
+            }
+            "enroll" -> {
+                val hash = perchEye.enroll()
+                result.success(hash)
+            }
+            "verify" -> {
+                val hash = call.argument<String>("hash")
+                val sim = if (hash != null) perchEye.verify(hash) else 0.0f
+                result.success(sim.toDouble())
+            }
+            "evaluate" -> {
+                val images = call.argument<List<String>>("images")
+                if (images.isNullOrEmpty()) {
+                    result.error("INVALID_ARGUMENT", "Images list is empty", null)
+                    return
+                }
+
+                val bitmaps = images.mapNotNull { decode(it) }
+                if (bitmaps.size != images.size) {
+                    result.error("DECODE_ERROR", "Some images failed to decode", null)
+                    return
+                }
+
+                perchEye.openTransaction()
+
+                val successful = mutableListOf<Bitmap>()
+                bitmaps.forEachIndexed { i, bmp ->
+                    val res = perchEye.addImage(bmp)
+                    Log.d("PerchEyePlugin", "evaluate: image[$i] -> addImage() result: $res")
+                    if (res == ImageResult.SUCCESS) {
+                        successful.add(bmp)
+                    }
+                }
+
+                if (successful.isEmpty()) {
+                    result.error("NO_VALID_IMAGES", "None of the images passed addImage()", null)
+                    return
+                }
+
+                val hash = perchEye.evaluate(successful)
+                Log.d("PerchEyePlugin", "evaluate result hash: $hash")
+                result.success(hash)
+            }
+            "compareList" -> {
+                val imgs = call.argument<List<String>>("images")?.mapNotNull { decode(it) } ?: emptyList()
+                val hash = call.argument<String>("hash")
+                perchEye.openTransaction()
+                val sim = if (hash != null) perchEye.compare(imgs, hash) else 0.0f
+                result.success(sim.toDouble())
+            }
             "compareFaces" -> {
                 val img1 = call.argument<String>("img1")
                 val img2 = call.argument<String>("img2")
@@ -46,33 +125,28 @@ class PerchEyePlugin: FlutterPlugin, MethodCallHandler {
             return 0.0
         }
 
-        fun decode(b64: String): Bitmap? {
-            return try {
-                val bytes = Base64.decode(b64, Base64.DEFAULT)
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to decode image", e)
-                null
-            }
-        }
-
         val bmp1 = decode(img1) ?: return 0.0
         val bmp2 = decode(img2) ?: return 0.0
 
         perchEye.openTransaction()
         val add1 = perchEye.addImage(bmp1)
-        Log.d(TAG, "addImage1 result: $add1")
         if (add1 != ImageResult.SUCCESS) return 0.0
         val hash = perchEye.enroll()
-        Log.d(TAG, "enroll hash: $hash")
 
         perchEye.openTransaction()
         val add2 = perchEye.addImage(bmp2)
-        Log.d(TAG, "addImage2 result: $add2")
         if (add2 != ImageResult.SUCCESS) return 0.0
-        val sim = perchEye.verify(hash)
-        Log.d(TAG, "verify similarity: $sim")
-        return sim.toDouble()
+        return perchEye.verify(hash).toDouble()
+    }
+
+    private fun decode(b64: String?): Bitmap? {
+        return try {
+            val bytes = Base64.decode(b64, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to decode image", e)
+            null
+        }
     }
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
