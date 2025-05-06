@@ -24,6 +24,9 @@ class ComparePage extends StatefulWidget {
 
 class _ComparePageState extends State<ComparePage> {
   final ImagePicker _picker = ImagePicker();
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _resultKey = GlobalKey();
+
   File? _img1, _img2;
   double? _similarity;
   String? _enrollHash;
@@ -40,6 +43,7 @@ class _ComparePageState extends State<ComparePage> {
   @override
   void dispose() {
     PerchEye.destroy();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -95,7 +99,7 @@ class _ComparePageState extends State<ComparePage> {
       final successful = await PerchEye.addImagesWithLogging(_evaluateImages);
 
       if (successful.isEmpty) {
-        _showError('no image has passed addImage');
+        _showError('No image has passed addImage');
         return;
       }
 
@@ -106,6 +110,7 @@ class _ComparePageState extends State<ComparePage> {
       }
 
       setState(() => _evaluateHash = hash);
+      _scrollToResult();
     } catch (e) {
       _showError(e);
     } finally {
@@ -120,6 +125,7 @@ class _ComparePageState extends State<ComparePage> {
       await PerchEye.openTransaction();
       final sim = await PerchEye.compareList(_evaluateImages, _evaluateHash!);
       setState(() => _similarity = sim);
+      _scrollToResult();
     } catch (e) {
       _showError(e);
     } finally {
@@ -136,6 +142,7 @@ class _ComparePageState extends State<ComparePage> {
       await PerchEye.addImage(b64);
       final hash = await PerchEye.enroll();
       setState(() => _enrollHash = hash);
+      _scrollToResult();
     } catch (e) {
       _showError(e);
     } finally {
@@ -151,11 +158,25 @@ class _ComparePageState extends State<ComparePage> {
       final b64_2 = base64Encode(await _img2!.readAsBytes());
       final sim = await PerchEye.compareFaces(b64_1, b64_2);
       setState(() => _similarity = sim);
+      _scrollToResult();
     } catch (e) {
       _showError(e);
     } finally {
       setState(() => _inProgress = false);
     }
+  }
+
+  void _scrollToResult() {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      final ctx = _resultKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   void _clearAll() {
@@ -181,6 +202,7 @@ class _ComparePageState extends State<ComparePage> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -267,6 +289,7 @@ class _ComparePageState extends State<ComparePage> {
 
             if (_similarity != null || _enrollHash != null || _evaluateHash != null)
               Padding(
+                key: _resultKey,
                 padding: const EdgeInsets.only(top: 16),
                 child: Card(
                   color: Colors.grey[100],
