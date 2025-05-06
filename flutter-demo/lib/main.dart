@@ -25,6 +25,7 @@ class _ComparePageState extends State<ComparePage> {
   double? _similarity;
   String? _enrollHash;
   String? _evaluateHash;
+  List<String> _evaluateImages = [];
   bool _inProgress = false;
 
   @override
@@ -67,6 +68,62 @@ class _ComparePageState extends State<ComparePage> {
     });
   }
 
+  Future<void> _pickEvaluateImages() async {
+    final files = await _picker.pickMultiImage();
+    if (files == null || files.isEmpty) return;
+
+    final base64List = await Future.wait(files.map((f) async {
+      final bytes = await File(f.path).readAsBytes();
+      return base64Encode(bytes);
+    }));
+
+    setState(() {
+      _evaluateImages = base64List;
+      _evaluateHash = null;
+    });
+  }
+
+  Future<void> _evaluate() async {
+    if (_evaluateImages.isEmpty) return _showError('Выберите изображения');
+    setState(() => _inProgress = true);
+
+    try {
+      await PerchEye.openTransaction();
+      final successful = await PerchEye.addImagesWithLogging(_evaluateImages);
+
+      if (successful.isEmpty) {
+        _showError('Ни одно изображение не прошло addImage');
+        return;
+      }
+
+      final hash = await PerchEye.evaluate(successful);
+      if (hash.isEmpty) {
+        _showError('evaluate вернул пустой hash');
+        return;
+      }
+
+      setState(() => _evaluateHash = hash);
+    } catch (e) {
+      _showError(e);
+    } finally {
+      setState(() => _inProgress = false);
+    }
+  }
+
+  Future<void> _compareList() async {
+    if (_evaluateHash == null || _evaluateImages.isEmpty) return;
+    setState(() => _inProgress = true);
+    try {
+      await PerchEye.openTransaction();
+      final sim = await PerchEye.compareList(_evaluateImages, _evaluateHash!);
+      setState(() => _similarity = sim);
+    } catch (e) {
+      _showError(e);
+    } finally {
+      setState(() => _inProgress = false);
+    }
+  }
+
   Future<void> _enroll() async {
     if (_img1 == null) return;
     setState(() => _inProgress = true);
@@ -98,7 +155,6 @@ class _ComparePageState extends State<ComparePage> {
     }
   }
 
-
   void _clearAll() {
     setState(() {
       _img1 = null;
@@ -106,6 +162,7 @@ class _ComparePageState extends State<ComparePage> {
       _similarity = null;
       _enrollHash = null;
       _evaluateHash = null;
+      _evaluateImages = [];
     });
   }
 
@@ -132,10 +189,22 @@ class _ComparePageState extends State<ComparePage> {
             onPressed: (_img1 != null && !_inProgress) ? _enroll : null,
             child: const Text('Enroll Image 1'),
           ),
-          const SizedBox(height: 12),
           ElevatedButton(
             onPressed: (_img2 != null && _img1 != null) ? _compareFaces : null,
             child: const Text('Compare Image 2 with Image 1'),
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: _pickEvaluateImages,
+            child: const Text('Pick Evaluate Images'),
+          ),
+          ElevatedButton(
+            onPressed: (_evaluateImages.isNotEmpty && !_inProgress) ? _evaluate : null,
+            child: const Text('Evaluate List'),
+          ),
+          ElevatedButton(
+            onPressed: (_evaluateHash != null && _evaluateImages.isNotEmpty) ? _compareList : null,
+            child: const Text('Compare List with Hash'),
           ),
           const SizedBox(height: 12),
           ElevatedButton(

@@ -55,4 +55,18 @@ class PerchEye {
     });
     return sim;
   }
+
+  static Future<List<String>> addImagesWithLogging(List<String> base64Images) async {
+    final successful = <String>[];
+
+    for (int i = 0; i < base64Images.length; i++) {
+      final result = await _channel.invokeMethod<String>('addImage', {'img': base64Images[i]});
+      print('addImage[$i] = $result');
+      if (result == 'SUCCESS') {
+        successful.add(base64Images[i]);
+      }
+    }
+
+    return successful;
+  }
 }
