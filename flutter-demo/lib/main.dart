@@ -10,7 +10,10 @@ void main() => runApp(const MyApp());
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
-  Widget build(BuildContext context) => const MaterialApp(home: ComparePage());
+  Widget build(BuildContext context) => const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: ComparePage(),
+  );
 }
 
 class ComparePage extends StatefulWidget {
@@ -84,7 +87,7 @@ class _ComparePageState extends State<ComparePage> {
   }
 
   Future<void> _evaluate() async {
-    if (_evaluateImages.isEmpty) return _showError('Выберите изображения');
+    if (_evaluateImages.isEmpty) return _showError('Choose photos');
     setState(() => _inProgress = true);
 
     try {
@@ -92,13 +95,13 @@ class _ComparePageState extends State<ComparePage> {
       final successful = await PerchEye.addImagesWithLogging(_evaluateImages);
 
       if (successful.isEmpty) {
-        _showError('Ни одно изображение не прошло addImage');
+        _showError('no image has passed addImage');
         return;
       }
 
       final hash = await PerchEye.evaluate(successful);
       if (hash.isEmpty) {
-        _showError('evaluate вернул пустой hash');
+        _showError('Evaluator returned an empty hash');
         return;
       }
 
@@ -173,63 +176,115 @@ class _ComparePageState extends State<ComparePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('PerchEye SDK Demo')),
+      appBar: AppBar(
+        title: const Text('PerchEye SDK Demo'),
+        centerTitle: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildImageSlot(1, _img1),
-              _buildImageSlot(2, _img2),
-            ],
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: (_img1 != null && !_inProgress) ? _enroll : null,
-            child: const Text('Enroll Image 1'),
-          ),
-          ElevatedButton(
-            onPressed: (_img2 != null && _img1 != null) ? _compareFaces : null,
-            child: const Text('Compare Image 2 with Image 1'),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: _pickEvaluateImages,
-            child: const Text('Pick Evaluate Images'),
-          ),
-          ElevatedButton(
-            onPressed: (_evaluateImages.isNotEmpty && !_inProgress) ? _evaluate : null,
-            child: const Text('Evaluate List'),
-          ),
-          ElevatedButton(
-            onPressed: (_evaluateHash != null && _evaluateImages.isNotEmpty) ? _compareList : null,
-            child: const Text('Compare List with Hash'),
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: _clearAll,
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Clear All'),
-          ),
-          const SizedBox(height: 24),
-          if (_inProgress) const CircularProgressIndicator(),
-          if (_similarity != null || _enrollHash != null || _evaluateHash != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: SelectableText(
-                [
-                  if (_similarity != null)
-                    'Similarity: ${_similarity!.toStringAsFixed(2)}',
-                  if (_enrollHash != null)
-                    'Enroll Hash:\n$_enrollHash',
-                  if (_evaluateHash != null)
-                    'Evaluate Hash:\n$_evaluateHash',
-                ].join('\n\n'),
-                style: const TextStyle(fontSize: 13),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    const Text('Image selection', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildImageSlot(1, _img1),
+                        _buildImageSlot(2, _img2),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-        ]),
+            const SizedBox(height: 16),
+
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('1. Comparison of two persons', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      label: const Text('Enroll Image 1'),
+                      onPressed: (_img1 != null && !_inProgress) ? _enroll : null,
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      label: const Text('Compare Image 2 with Image 1'),
+                      onPressed: (_img2 != null && _img1 != null && !_inProgress) ? _compareFaces : null,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('2. Evaluation of the image list', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      label: const Text('Pick Evaluate Images'),
+                      onPressed: _pickEvaluateImages,
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      label: const Text('Evaluate List'),
+                      onPressed: (_evaluateImages.isNotEmpty && !_inProgress) ? _evaluate : null,
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      label: const Text('Compare List with Hash'),
+                      onPressed: (_evaluateHash != null && _evaluateImages.isNotEmpty && !_inProgress) ? _compareList : null,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              label: const Text('Clear all'),
+              onPressed: _clearAll,
+            ),
+            const SizedBox(height: 24),
+
+            if (_inProgress) const Center(child: CircularProgressIndicator()),
+
+            if (_similarity != null || _enrollHash != null || _evaluateHash != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Card(
+                  color: Colors.grey[100],
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: SelectableText(
+                      [
+                        if (_similarity != null) 'Similarity: ${_similarity!.toStringAsFixed(2)}',
+                        if (_enrollHash != null) 'Enroll Hash:\n$_enrollHash',
+                        if (_evaluateHash != null) 'Evaluate Hash:\n$_evaluateHash',
+                      ].join('\n\n'),
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -238,11 +293,17 @@ class _ComparePageState extends State<ComparePage> {
     return GestureDetector(
       onTap: () => _pickImageSlot(index),
       child: Container(
-        width: 160,
-        height: 160,
-        color: Colors.grey[300],
+        width: 150,
+        height: 150,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.grey[300],
+        ),
         child: img != null
-            ? Image.file(img, fit: BoxFit.cover)
+            ? ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.file(img, fit: BoxFit.cover),
+        )
             : Center(child: Text('Select #$index')),
       ),
     );
