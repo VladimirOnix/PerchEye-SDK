@@ -1,7 +1,7 @@
 import { NativeModules, Platform } from 'react-native';
 
 const LINKING_ERROR =
-  `The package 'react-native-perch-eye' doesn't seem to be linked. Make sure: \n\n` +
+  `The package 'react-native-perch-eye' doesn't seem to be linked. Make sure:\n\n` +
   Platform.select({ ios: "- You have run 'pod install'\n", default: '' }) +
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
@@ -17,17 +17,47 @@ const PerchEye = NativeModules.PerchEyeModule
       }
     );
 
-export function extractDescriptor(images: string[]): Promise<number[][]> {
-  return PerchEye.extractDescriptor(images);
+export function init(): Promise<void> {
+  return PerchEye.init();
 }
 
-export function setGallery(gallery: { name: string; descriptor: number[] }[]) {
-  PerchEye.setGallery(gallery);
+export function destroy(): Promise<void> {
+  return PerchEye.destroy();
 }
 
-export function recognize(
-  image: string,
-  onRecognition: (name: string, similarity: number) => void
-) {
-  PerchEye.recognize(image, onRecognition);
+export function openTransaction(): Promise<void> {
+  return PerchEye.openTransaction();
+}
+
+export function addImage(base64: string): Promise<string> {
+  return PerchEye.addImage({ img: base64 });
+}
+
+export function addImageRaw(pixels: number[], width: number, height: number): Promise<string> {
+  return PerchEye.addImageRaw({ pixels, width, height });
+}
+
+export function enroll(): Promise<string> {
+  return PerchEye.enroll();
+}
+
+export function verify(hash: string): Promise<number> {
+  return PerchEye.verify({ hash });
+}
+
+export function evaluate(images: string[]): Promise<string> {
+  return PerchEye.evaluate({ images });
+}
+
+export function compareList(images: string[], hash: string): Promise<number> {
+  return PerchEye.compareList({ images, hash });
+}
+
+export async function testString(): Promise<string> {
+  return await PerchEye.testString();
+}
+
+
+export function compareFaces(img1: string, img2: string): Promise<number> {
+  return PerchEye.compareFaces({ img1, img2 });
 }
