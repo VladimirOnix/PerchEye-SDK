@@ -166,7 +166,7 @@ class PerchEyeModule(private val reactContext: ReactApplicationContext) :
       }
 
       val similarity = perchEye.verify(hash)
-      promise.resolve(228.toDouble())
+      promise.resolve(similarity)
     } catch (e: Exception) {
       promise.reject("ERROR", e)
     }
