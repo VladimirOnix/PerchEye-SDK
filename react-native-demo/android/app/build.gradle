@@ -109,7 +109,6 @@ android {
 
 dependencies {
     implementation 'androidx.exifinterface:exifinterface:1.4.1'
-    implementation project(":perch-eye-lib")
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 

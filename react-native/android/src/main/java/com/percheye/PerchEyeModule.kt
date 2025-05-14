@@ -1,158 +1,160 @@
 package com.percheye
 
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Base64
 import android.util.Log
-import com.facebook.react.bridge.Arguments
-import com.facebook.react.bridge.Callback
-import com.facebook.react.bridge.LifecycleEventListener
-import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactContextBaseJavaModule
-import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.bridge.Promise
-import com.facebook.react.bridge.ReadableArray
+import com.facebook.react.bridge.*
+import com.onix.faceauth.sdk.ImageResult
 import com.onix.faceauth.sdk.PerchEye
-import com.percheye.util.convertToBitmap
-import com.percheye.util.descriptorToHash
-import com.percheye.util.hashToDescriptor
-import java.util.LinkedList
-import java.util.Queue
 
-class PerchEyeModule(reactContext: ReactApplicationContext) :
+class PerchEyeModule(private val reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext), LifecycleEventListener {
 
-  private var perchEye: PerchEye? = null
-  private val gallery: HashMap<String, List<String>> = HashMap() // name -> List of hashes
-  private val requestQueue: Queue<Pair<String, Callback>> = LinkedList()
-  private var isProcessing = false
+  private var perchEye: PerchEye = PerchEye(reactContext)
 
+  companion object {
+    private const val TAG = "PerchEyeModule"
+    const val NAME = "PerchEyeModule"
+  }
 
   init {
     reactContext.addLifecycleEventListener(this)
-
-    perchEye = PerchEye(reactContext)
-    perchEye?.init()
+    perchEye.init()
   }
 
-  override fun getName(): String {
-    return NAME
-  }
+  override fun getName(): String = NAME
 
   override fun onHostDestroy() {
-    perchEye?.destroy()
+    perchEye.destroy()
   }
 
-  override fun onHostPause() {
-    return
-  }
+  override fun onHostPause() {}
+  override fun onHostResume() {}
 
-  override fun onHostResume() {
-    return
+  @ReactMethod
+  fun init(promise: Promise) {
+    perchEye.init()
+    promise.resolve(null)
   }
 
   @ReactMethod
-  fun extractDescriptor(images: ReadableArray, promise: Promise) {
-    val descriptors = mutableListOf<List<Short>>()
-
-    for (i in 0 until images.size()) {
-      try {
-        val base64String = images.getString(i) ?: throw NullPointerException()
-        val bitmap = convertToBitmap(base64String)
-
-        if (bitmap != null) {
-          val hash = perchEye?.evaluate(listOf(bitmap)) ?: throw NullPointerException()
-          val descriptor = hashToDescriptor(hash)
-
-          descriptors.add(descriptor)
-
-          bitmap.recycle()
-        } else {
-          descriptors.add(listOf())
-        }
-
-      } catch (e: Exception) {
-        descriptors.add(listOf())
-      }
-    }
-
-    promise.resolve(Arguments.makeNativeArray(descriptors))
+  fun destroy(promise: Promise) {
+    perchEye.destroy()
+    promise.resolve(null)
   }
 
   @ReactMethod
-  fun setGallery(galleryArray: ReadableArray) {
-    gallery.clear()
-
-    for (i in 0 until galleryArray.size()) {
-      try {
-        val item = galleryArray.getMap(i) ?: continue
-
-        val name = item.getString("name") ?: ""
-        val descriptorArray = item.getArray("descriptor")?.toArrayList()?.mapNotNull {
-          (it as? Double)?.toInt()?.toShort()
-        }?.toShortArray() ?: shortArrayOf()
-
-        val hash = descriptorToHash(descriptorArray.toList())
-
-        if (gallery.containsKey(name)) {
-          gallery[name] = gallery[name]?.plus(hash) ?: listOf(hash)
-        } else {
-          gallery[name] = listOf(hash)
-        }
-
-      } catch (e: Exception) {
-        Log.d(this::class.simpleName, e.message.toString())
-      }
-    }
+  fun openTransaction(promise: Promise) {
+    perchEye.openTransaction()
+    promise.resolve(null)
   }
 
   @ReactMethod
-  fun recognize(image: String, callback: Callback) {
-    if (isProcessing) {
-      requestQueue.add(image to callback)
-      return
-    }
-    isProcessing = true
-
-    processRecognition(image, callback)
+  fun addImage(params: ReadableMap, promise: Promise) {
+    val img = params.getString("img")
+    val bmp = decode(img)
+    val res = bmp?.let { perchEye.addImage(it).name } ?: "INTERNAL_ERROR"
+    promise.resolve(res)
   }
 
-  private fun processRecognition(image: String, callback: Callback) {
+  @ReactMethod
+  fun enroll(promise: Promise) {
+    val hash = perchEye.enroll()
+    promise.resolve(hash)
+  }
+
+  @ReactMethod
+  fun verify(params: ReadableMap, promise: Promise) {
+    val hash = params.getString("hash")
+    val sim = if (hash != null) perchEye.verify(hash) else 0.0f
+    promise.resolve(sim.toDouble())
+  }
+
+  @ReactMethod
+  fun evaluate(params: ReadableMap, promise: Promise) {
     try {
-      val bitmap = convertToBitmap(image)
-      if (bitmap != null) {
-        var bestMatchName = ""
-        var highestSimilarity = 0f
-
-        for ((name, storedHashes) in gallery) {
-          for (storedHash in storedHashes) {
-            val similarity = perchEye?.compare(listOf(bitmap), storedHash) ?: 0f
-            if (similarity > highestSimilarity) {
-              highestSimilarity = similarity
-              bestMatchName = name
-            }
-          }
-        }
-
-        if (highestSimilarity != 0f && bestMatchName != "") {
-          callback.invoke(bestMatchName, highestSimilarity)
-        }
-
-        bitmap.recycle()
+      val images = params.getArray("images")?.toArrayList()?.mapNotNull { decode(it as String) } ?: emptyList()
+      if (images.isEmpty()) {
+        promise.reject("INVALID_ARGUMENT", "Images list is empty or invalid")
+        return
       }
+
+      perchEye.openTransaction()
+
+      val successful = images.filter {
+        perchEye.addImage(it) == ImageResult.SUCCESS
+      }
+
+      if (successful.isEmpty()) {
+        promise.reject("NO_VALID_IMAGES", "None of the images passed addImage()")
+        return
+      }
+
+      val hash = perchEye.evaluate(successful)
+      promise.resolve(hash)
     } catch (e: Exception) {
-      Log.d(this::class.simpleName, e.message.toString())
-    } finally {
-      val nextRequest = requestQueue.poll()
-
-      if (nextRequest != null) {
-        val (nextImage, nextCallback) = nextRequest
-        processRecognition(nextImage, nextCallback)
-      } else {
-        isProcessing = false
-      }
+      promise.reject("ERROR", e)
     }
   }
 
-  companion object {
-    const val NAME = "PerchEyeModule"
+  @ReactMethod
+  fun compareList(params: ReadableMap, promise: Promise) {
+    try {
+      val images = params.getArray("images")?.toArrayList()?.mapNotNull { decode(it as String) } ?: emptyList()
+      val hash = params.getString("hash")
+
+      perchEye.openTransaction()
+
+      val sim = if (hash != null) perchEye.compare(images, hash) else 0.0f
+      promise.resolve(sim.toDouble())
+    } catch (e: Exception) {
+      promise.reject("ERROR", e)
+    }
+  }
+
+  @ReactMethod
+  fun compareFaces(params: ReadableMap, promise: Promise) {
+    try {
+      val img1 = params.getString("img1")
+      val img2 = params.getString("img2")
+
+      if (img1.isNullOrEmpty() || img2.isNullOrEmpty()) {
+        promise.resolve(0.0)
+        return
+      }
+
+      val bmp1 = decode(img1) ?: run { promise.resolve(0.0); return }
+      val bmp2 = decode(img2) ?: run { promise.resolve(0.0); return }
+
+      perchEye.openTransaction()
+      if (perchEye.addImage(bmp1) != ImageResult.SUCCESS) {
+        promise.resolve(0.0)
+        return
+      }
+
+      val hash = perchEye.enroll()
+
+      perchEye.openTransaction()
+      if (perchEye.addImage(bmp2) != ImageResult.SUCCESS || hash.isEmpty()) {
+        promise.resolve(0.0)
+        return
+      }
+
+      val similarity = perchEye.verify(hash)
+      promise.resolve(similarity)
+    } catch (e: Exception) {
+      promise.reject("ERROR", e)
+    }
+  }
+
+  private fun decode(base64: String?): Bitmap? {
+    return try {
+      val bytes = Base64.decode(base64, Base64.DEFAULT)
+      BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to decode base64", e)
+      null
+    }
   }
 }
