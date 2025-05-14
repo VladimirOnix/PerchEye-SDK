@@ -33,10 +33,6 @@ export function addImage(base64: string): Promise<string> {
   return PerchEye.addImage({ img: base64 });
 }
 
-export function addImageRaw(pixels: number[], width: number, height: number): Promise<string> {
-  return PerchEye.addImageRaw({ pixels, width, height });
-}
-
 export function enroll(): Promise<string> {
   return PerchEye.enroll();
 }
@@ -52,11 +48,6 @@ export function evaluate(images: string[]): Promise<string> {
 export function compareList(images: string[], hash: string): Promise<number> {
   return PerchEye.compareList({ images, hash });
 }
-
-export async function testString(): Promise<string> {
-  return await PerchEye.testString();
-}
-
 
 export function compareFaces(img1: string, img2: string): Promise<number> {
   return PerchEye.compareFaces({ img1, img2 });

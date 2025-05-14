@@ -59,25 +59,6 @@ class PerchEyeModule(private val reactContext: ReactApplicationContext) :
   }
 
   @ReactMethod
-  fun addImageRaw(params: ReadableMap, promise: Promise) {
-    try {
-      val pixels = params.getArray("pixels")?.toArrayList()?.map { (it as Double).toInt().toByte() }?.toByteArray()
-      val width = params.getInt("width")
-      val height = params.getInt("height")
-
-      if (pixels == null || width <= 0 || height <= 0) {
-        promise.reject("INVALID_ARGUMENT", "Missing or invalid RGBA data")
-        return
-      }
-
-      val res = perchEye.addImage(pixels, width, height)
-      promise.resolve(res.name)
-    } catch (e: Exception) {
-      promise.reject("ERROR", e)
-    }
-  }
-
-  @ReactMethod
   fun enroll(promise: Promise) {
     val hash = perchEye.enroll()
     promise.resolve(hash)
@@ -130,11 +111,6 @@ class PerchEyeModule(private val reactContext: ReactApplicationContext) :
     } catch (e: Exception) {
       promise.reject("ERROR", e)
     }
-  }
-
-  @ReactMethod
-  fun testString(promise: Promise) {
-    promise.resolve("Meow meow 65")
   }
 
   @ReactMethod
