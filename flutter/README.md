@@ -4,6 +4,16 @@ This class provides a high-level Dart interface for accessing native face recogn
 
 ---
 
+## ⚙️ Installation
+
+Run this in your Flutter project:
+
+```dart
+flutter pub add perch_eye
+```
+
+---
+
 ## 🔌 Class: `PerchEye`
 
 ### 📡 Channel
