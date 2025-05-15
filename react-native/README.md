@@ -22,12 +22,16 @@ import { init, destroy } from 'react-native-perch-eye';
 await init();      // Init native engine
 await destroy();   // Cleanup
 ```
+Note: These methods are called natively by the module lifecycle, so manual calls are usually not required.
+
 
 ---
 
 ## 🚀 Usage
 
 ### 🔐 Enroll - Create Hash From Face Images
+
+To create a face hash from a sequence of base64 images:
 
 ```ts
 import { openTransaction, addImage, enroll } from 'react-native-perch-eye';
@@ -43,6 +47,8 @@ const hash = await enroll();
 
 ### 🧪 Verify - Compare New Face With Stored Hash
 
+To compare a new image sequence against a previously created hash:
+
 ```ts
 import { openTransaction, addImage, verify } from 'react-native-perch-eye';
 
@@ -54,17 +60,9 @@ const similarity = await verify(hash);
 
 ---
 
-### ⚡ Raw Pixels Support
+### ⚡ Compare a list
 
-```ts
-import { addImageRaw } from 'react-native-perch-eye';
-
-await addImageRaw(pixels, width, height); // RGBA int array
-```
-
----
-
-### ⚡ Lightweight Methods (Normalized 160x160)
+Compares a list of base64-encoded images against a face hash.
 
 ```ts
 import { evaluate, compareList } from 'react-native-perch-eye';
@@ -76,6 +74,12 @@ const similarity = await compareList(base64Images, hash);
 ---
 
 ### ⚡ Optional: Direct Face Comparison
+
+Convenience method:
+Internally performs:
+
+* `openTransaction()`
+* `addImage(image1)` → `enroll()` → `openTransaction()` → `addImage(image2)` → `verify()`
 
 ```ts
 import { compareFaces } from 'react-native-perch-eye';
