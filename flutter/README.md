@@ -1,101 +1,169 @@
-# 🧠 Perch Eye SDK Flutter Documentation
+# PerchEye Flutter SDK – Dart API Reference
 
-The **Perch Eye SDK** for Flutter allows you to extract unique face hashes from image sequences and verify them against new images. The SDK is built using TensorFlow and C++ and provides high performance for mobile applications, with zero dependencies.
-
----
-
-## 🔧 Integration
-
-To include the Perch Eye SDK in your Flutter project, follow these steps:
-
-1. Add the plugin to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  perch_eye:
-    path: ../flutter
-```
-
-2. Run `flutter pub get` to install the package.
+This class provides a high-level Dart interface for accessing native face recognition functionality through platform channels using the PerchEye Android SDK.
 
 ---
 
-## 🔧 Initialization
+## 🔌 Class: `PerchEye`
 
-To initialize the SDK, call the `init()` method:
+### 📡 Channel
 
 ```dart
-import 'package:perch_eye/perch_eye.dart';
-
-PerchEye.init();
+static const MethodChannel _channel = MethodChannel('perch_eye_method_channel');
 ```
 
-To clean up resources when no longer needed:
+> Internal method channel used for native communication (do not modify).
+
+---
+
+## 🧹 Methods
+
+### `Future<void> init()`
+
+Initializes the underlying PerchEye native SDK.
+Must be called **once before** any recognition-related operations.
 
 ```dart
-PerchEye.destroy();
+await PerchEye.init();
 ```
 
 ---
 
-## 🚀 Usage
+### `Future<void> destroy()`
 
-### 🔐 Enroll - Create Hash From Face Images
-
-To create a unique hash from a sequence of face images (base64 or raw RGBA format):
-
-```dart
-PerchEye.openTransaction();
-await PerchEye.addImage(base64Image1);
-await PerchEye.addImage(base64Image2);
-// ... more images
-String hash = await PerchEye.enroll();
-```
-
-### 🧪 Verify - Compare New Face With Stored Hash
-
-To compare a new image sequence against a previously created hash:
+Releases SDK resources and unloads the model.
+Call this when the app or session ends.
 
 ```dart
-PerchEye.openTransaction();
-await PerchEye.addImage(base64Image4);
-// ... more images
-double similarity = await PerchEye.verify(hash);
+await PerchEye.destroy();
 ```
 
 ---
 
-### ⚡ Lightweight Methods (Normalized Input)
+### `Future<void> openTransaction()`
 
-These methods are optimized for small (160x160), preprocessed face bitmaps:
+Opens a new session for face processing.
+This is required **before** `addImage()`.
 
 ```dart
-String hash = await PerchEye.evaluate(base64Images);
-
-double similarity = await PerchEye.compareList(base64Images, hash);
+await PerchEye.openTransaction();
 ```
 
 ---
 
-## ❗ Error Codes
+### `Future<String> addImage(String base64)`
 
-addImage method error codes :
+Adds a face image to the current transaction for processing.
+Accepts a base64-encoded image string.
+
+Returns:
+
+* A string representing the result enum (`SUCCESS`, `FACE_NOT_FOUND`, etc.)
 
 ```dart
-enum ImageResult {
-    SUCCESS,
-    FACE_NOT_FOUND,
-    FILE_NOT_FOUND,
-    TRANSACTION_NOT_OPEN,
-    SDK_NOT_INITIALIZED,
-    INTERNAL_ERROR
+final result = await PerchEye.addImage(base64Image);
+if (result == 'SUCCESS') {
+  // Proceed with enroll or verify
 }
 ```
 
 ---
 
-## ✅ Summary
-- Minimal, high-performance Flutter SDK for face hash comparison.
-- Zero dependencies, designed for mobile applications.
-- Works with both base64 and raw RGBA face images.
-- Includes methods for enrolling, verifying, and comparing face hashes.
+### `Future<String> enroll()`
+
+Generates a Base64-encoded face embedding hash from the previously added image.
+
+Returns:
+
+* A `String` face hash
+
+```dart
+await PerchEye.openTransaction();
+await PerchEye.addImage(base64Image);
+final hash = await PerchEye.enroll();
+```
+
+---
+
+### `Future<double> verify(String hash)`
+
+Verifies the last added image against a given face hash.
+
+Returns:
+
+* Similarity score (`0.0` to `1.0`)
+
+```dart
+await PerchEye.openTransaction();
+await PerchEye.addImage(base64Image);
+final similarity = await PerchEye.verify(hash);
+```
+
+---
+
+### `Future<String> evaluate(List<String> base64Images)`
+
+Evaluates multiple images to produce a single aggregated face hash.
+
+Returns:
+
+* Combined hash as `String`
+
+```dart
+final hash = await PerchEye.evaluate([base64Image1, base64Image2]);
+```
+
+---
+
+### `Future<double> compareList(List<String> images, String hash)`
+
+Compares a list of base64-encoded images against a face hash.
+
+Returns:
+
+* Similarity score (`0.0` to `1.0`)
+
+```dart
+final sim = await PerchEye.compareList(
+  [base64Image1, base64Image2],
+  knownHash,
+);
+```
+
+---
+
+### `Future<double> compareFaces(String base64_1, String base64_2)`
+
+Convenience method:
+Internally performs:
+
+* `openTransaction()`
+* `addImage(image1)` → `enroll()` → `openTransaction()` → `addImage(image2)` → `verify()`
+
+Returns:
+
+* Similarity score (`0.0` to `1.0`)
+
+```dart
+final similarity = await PerchEye.compareFaces(base64Image1, base64Image2);
+```
+
+---
+
+## 🧪 Example Workflow
+
+```dart
+await PerchEye.init();
+
+await PerchEye.openTransaction();
+await PerchEye.addImage(base64Image1);
+final hash = await PerchEye.enroll();
+
+await PerchEye.openTransaction();
+await PerchEye.addImage(base64Image2);
+final similarity = await PerchEye.verify(hash);
+
+await PerchEye.destroy();
+```
+
+---

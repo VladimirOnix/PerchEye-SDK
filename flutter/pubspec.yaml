@@ -1,7 +1,7 @@
 name: perch_eye
-description: Flutter plugin for PerchEye SDK (AAR)
-version: 1.0.0
-publish_to: none
+description: Flutter plugin for PerchEye SDK
+version: 0.0.1
+homepage: https://github.com/VladimirOnix/PerchEye-SDK/tree/main/flutter
 
 environment:
   sdk: '>=2.17.0 <4.0.0'
