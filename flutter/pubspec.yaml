@@ -3,8 +3,13 @@ description: Flutter plugin for PerchEye SDK
 version: 0.0.1
 homepage: https://github.com/VladimirOnix/PerchEye-SDK/tree/main/flutter
 
+dependencies:
+  flutter:
+    sdk: flutter
+
 environment:
-  sdk: '>=2.17.0 <4.0.0'
+  sdk: ^3.7.2
+  flutter: '>=3.3.0'
 
 flutter:
   plugin:
